@@ -1,19 +1,15 @@
 # build stage
-FROM golang:1.18
+FROM golang:1.19-alpine3.16 AS builder
+RUN mkdir /build
+COPY . /build/.
+WORKDIR /build
+RUN CGO_ENABLED=0 GOOS=linux go build -a -o frontend .
 
-WORKDIR /usr/src/app
-
-COPY . .
-
-RUN go build -v -o /usr/local/bin/frontend ./...
+# final stage
+FROM scratch
 EXPOSE 8080
 ENV BACKEND_DNS=localhost
 ENV BACKEND_PORT=9000
-
-CMD ["frontend"]
-
-# # final stage
-# FROM scratch
-# WORKDIR /app
-# COPY --from=builder /src/goapp /app/
-# ENTRYPOINT ["/app/goapp"]
+WORKDIR /app
+COPY --from=builder /build/ .
+ENTRYPOINT ["/app/frontend"]

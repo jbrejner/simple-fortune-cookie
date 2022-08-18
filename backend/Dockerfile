@@ -1,19 +1,14 @@
 # build stage
-FROM golang:1.18
-
-WORKDIR /usr/src/app
-
-# pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
-COPY go.mod go.sum ./
+FROM golang:1.19-alpine3.16 AS builder
+RUN mkdir /build
+COPY . /build/.
+WORKDIR /build
 RUN go mod download && go mod verify
+RUN CGO_ENABLED=0 GOOS=linux go build -a -o backend .
 
-COPY . .
-RUN go build -v -o /usr/local/bin/backend ./...
+# final stage
+FROM scratch
 EXPOSE 9000
-CMD ["backend"]
-
-# # final stage
-# FROM scratch
-# WORKDIR /app
-# COPY --from=builder /src/goapp /app/
-# ENTRYPOINT ["/app/goapp"]
+WORKDIR /app
+COPY --from=builder /build/ .
+ENTRYPOINT ["/app/backend"]
